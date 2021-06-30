@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1019791388653",
+    "project_id": "saidia-plus-fb5ce",
+    "storage_bucket": "saidia-plus-fb5ce.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1019791388653:android:ece2121ee7ba4fb8c481e4",
+        "android_client_info": {
+          "package_name": "com.sandramueni.victimapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1019791388653-ndl34428rc8i3ajb440iuklu91dseol8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQST2iIBCjl5_n8-qQMLkwnOkHzBIhBrY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1019791388653-ndl34428rc8i3ajb440iuklu91dseol8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

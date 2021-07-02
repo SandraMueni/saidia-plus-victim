@@ -3,6 +3,7 @@ import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_geofire/flutter_geofire.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -12,8 +13,10 @@ import 'package:victim_app/AllScreens/searchScreen.dart';
 import 'package:victim_app/AllWidgets/Divider.dart';
 import 'package:victim_app/AllWidgets/progressDialog.dart';
 import 'package:victim_app/Assistants/assistantMethods.dart';
+import 'package:victim_app/Assistants/geoFireAssistant.dart';
 import 'package:victim_app/DataHandler/appData.dart';
 import 'package:victim_app/Models/directionDetails.dart';
+import 'package:victim_app/Models/nearbyAvailableParamedics.dart';
 
 import '../configMaps.dart';
 import 'loginScreen.dart';
@@ -50,8 +53,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
   double paramedicDetailsContainerHeight = 0;
 
   bool drawerOpen = true;
+  bool nearbyAvailableParamedicKeysLoaded = false;
 
   DatabaseReference victimRequestRef;
+
+  BitmapDescriptor nearByIcon;
 
   @override
   void initState() {
@@ -185,6 +191,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     String address = await AssistantMethods.searchCoordinateAddress(position, context);
     print("This is your address :: " + address);
 
+    initGeoFireListiner();
+
   }
 
   static final CameraPosition _kGooglePlex = CameraPosition(
@@ -192,6 +200,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
 
   @override
   Widget build(BuildContext context) {
+    createIconMarker();
     return Scaffold(
         key: scaffoldKey,
         appBar: AppBar(
@@ -753,6 +762,91 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
       circlesSet.add(pickUpLocCircle);
       circlesSet.add(dropOffLocCircle);
     });
+  }
+
+  void initGeoFireListiner()
+  {
+    Geofire.initialize("Available_Paramedics");
+
+    Geofire.queryAtLocation(currentPosition.latitude, currentPosition.longitude, 15).listen((map) {
+      print(map);
+      if (map != null) {
+        var callBack = map['callBack'];
+
+        switch (callBack) {
+          case Geofire.onKeyEntered:
+            NearbyAvailableParamedics nearbyAvailableParamedics = NearbyAvailableParamedics();
+            nearbyAvailableParamedics.key = map['key'];
+            nearbyAvailableParamedics.latitude = map['latitude'];
+            nearbyAvailableParamedics.longitude = map['longitude'];
+            GeoFireAssistant.nearbyAvailableParamedicsList.add(nearbyAvailableParamedics);
+            if(nearbyAvailableParamedicKeysLoaded == true)
+            {
+              updateAvailableParamedicsOnMap();
+            }
+            break;
+
+          case Geofire.onKeyExited:
+            GeoFireAssistant.removeParamedicFromlist(map['key']);
+            updateAvailableParamedicsOnMap();
+            break;
+
+          case Geofire.onKeyMoved:
+            NearbyAvailableParamedics nearbyAvailableParamedics = NearbyAvailableParamedics();
+            nearbyAvailableParamedics.key = map['key'];
+            nearbyAvailableParamedics.latitude = map['latitude'];
+            nearbyAvailableParamedics.longitude = map['longitude'];
+            GeoFireAssistant.updateParamedicByLocation(nearbyAvailableParamedics);
+            updateAvailableParamedicsOnMap();
+            break;
+
+          case Geofire.onGeoQueryReady:
+            updateAvailableParamedicsOnMap();
+            break;
+        }
+      }
+
+      setState(() {});
+    });
+    //comment
+  }
+
+  void updateAvailableParamedicsOnMap()
+  {
+    setState(() {
+      markersSet.clear();
+    });
+
+    Set<Marker> tMarkers = Set<Marker>();
+    for(NearbyAvailableParamedics paramedic in GeoFireAssistant.nearbyAvailableParamedicsList)
+    {
+      LatLng paramedicAvailablePosition = LatLng(paramedic.latitude, paramedic.longitude);
+
+      Marker marker = Marker(
+        markerId: MarkerId('paramedic${paramedic.key}'),
+        position: paramedicAvailablePosition,
+        icon: nearByIcon,
+        rotation: AssistantMethods.createRandomNumber(360),
+      );
+
+      tMarkers.add(marker);
+    }
+    setState(() {
+      markersSet = tMarkers;
+    });
+  }
+
+  void createIconMarker()
+  {
+    if(nearByIcon == null)
+    {
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(context, size: Size(2, 2));
+      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/ambulance_top.png")
+          .then((value)
+      {
+        nearByIcon = value;
+      });
+    }
   }
 
 }

@@ -11,6 +11,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:victim_app/AllScreens/searchScreen.dart';
 import 'package:victim_app/AllWidgets/Divider.dart';
+import 'package:victim_app/AllWidgets/noParamedicAvailableDialog.dart';
 import 'package:victim_app/AllWidgets/progressDialog.dart';
 import 'package:victim_app/Assistants/assistantMethods.dart';
 import 'package:victim_app/Assistants/geoFireAssistant.dart';
@@ -19,6 +20,7 @@ import 'package:victim_app/Models/directionDetails.dart';
 import 'package:victim_app/Models/nearbyAvailableParamedics.dart';
 
 import '../configMaps.dart';
+import '../main.dart';
 import 'loginScreen.dart';
 
 class MainScreen extends StatefulWidget
@@ -29,8 +31,7 @@ class MainScreen extends StatefulWidget
   _MainScreenState createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
-{
+class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   Completer<GoogleMapController> _controllerGoogleMap = Completer();
   GoogleMapController newGoogleMapController;
 
@@ -42,7 +43,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
 
   Position currentPosition;
   var geoLocator = Geolocator();
-  double bottomPaddingOfMap =0;
+  double bottomPaddingOfMap = 0;
 
   Set<Marker> markersSet = {};
   Set<Circle> circlesSet = {};
@@ -59,6 +60,14 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
 
   BitmapDescriptor nearByIcon;
 
+  List<NearbyAvailableParamedics> availableParamedics;
+
+  String state = "normal";
+
+  StreamSubscription<Event> tripStreamSubscription;
+
+  bool isRequestingPositionDetails = false;
+
   @override
   void initState() {
     // TODO: implement initState
@@ -68,10 +77,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
   }
 
   void saveVictimRequest() {
-    victimRequestRef = FirebaseDatabase.instance.reference().child("Victim Requests").push();
+    victimRequestRef =
+        FirebaseDatabase.instance.reference().child("Victim Requests").push();
 
-    var pickUp = Provider.of<AppData>(context, listen: false).pickUpLocation;
-    var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
+    var pickUp = Provider
+        .of<AppData>(context, listen: false)
+        .pickUpLocation;
+    var dropOff = Provider
+        .of<AppData>(context, listen: false)
+        .dropOffLocation;
 
     Map pickUpLocMap =
     {
@@ -99,14 +113,17 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     };
 
     victimRequestRef.set(tripInfoMap);
-    /*rideStreamSubscription = victimRequestRef.onValue.listen((event){
+
+    tripStreamSubscription = victimRequestRef.onValue.listen((event){
       if(event.snapshot.value == null)
       {
         return;
       }
       if(event.snapshot.value["ambulance_details"] != null)
       {
-        statusRide = event.snapshot.value["ambulance_details"].toString();
+        setState(() {
+          ambulanceDetailsParamedic = event.snapshot.value["ambulance_details"].toString();
+        });
       }
       if(event.snapshot.value["paramedic_name"] != null)
       {
@@ -114,29 +131,100 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
           paramedicName = event.snapshot.value["paramedic_name"].toString();
         });
       }
-      if(event.snapshot.value["paramedic_phone"] != null)
+      if(event.snapshot.value["paramedic_contact"] != null)
       {
         setState(() {
-          paramedicPhone = event.snapshot.value["paramedic_phone"].toString();
+          paramedicContact = event.snapshot.value["paramedic_contact"].toString();
         });
       }
-      if(statusRide == "accepted")
+      if(event.snapshot.value["paramedic_location"] != null)
+      {
+        double paramedicLat = double.parse(event.snapshot.value["paramedic_location"]["latitude"].toString());
+        double paramedicLng = double.parse(event.snapshot.value["paramedic_location"]["longitude"].toString());
+        LatLng paramedicCurrentLocation = LatLng(paramedicLat,paramedicLng);
+
+        if(statusTrip == "accepted")
+        {
+          updateTripTimeToPickUpLoc(paramedicCurrentLocation);
+        }
+        else if(statusTrip == "ontrip")
+          {
+            updateTripTimeToDropOffLoc(paramedicCurrentLocation);
+          }
+        else if(statusTrip == "arrived")
+        {
+          setState(() {
+            tripStatus = "Paramedic has arrived";
+          });
+        }
+      }
+      if(event.snapshot.value["status"] != null)
+      {
+        statusTrip = event.snapshot.value["status"].toString();
+      }
+      if(statusTrip == "accepted")
       {
         displayParamedicDetailsContainer();
+        Geofire.stopListener();
+        deleteGeofileMarkers();
       }
-    });*/
+    });
   }
 
-  void cancelTripRequest()
+  void deleteGeofileMarkers()
   {
+    markersSet.removeWhere((element) => element.markerId.value.contains("paramedic"));
+  }
+
+  void updateTripTimeToPickUpLoc(LatLng paramedicCurrentLocation) async
+  {
+    if(isRequestingPositionDetails == false)
+      {
+        isRequestingPositionDetails = true;
+
+        var positionVictimLatLng = LatLng(currentPosition.latitude, currentPosition.longitude);
+        var details = await AssistantMethods.obtainPlaceDirectionDetails(paramedicCurrentLocation, positionVictimLatLng);
+        if(details == null)
+        {
+          return;
+        }
+        setState(() {
+          tripStatus = "A paramedic is on the way - " + details.durationText;
+        });
+
+        isRequestingPositionDetails = false;
+      }
+  }
+
+  void updateTripTimeToDropOffLoc(LatLng paramedicCurrentLocation) async
+  {
+    if(isRequestingPositionDetails == false)
+    {
+      isRequestingPositionDetails = true;
+
+      var dropOff = Provider.of<AppData>(context, listen: false).dropOffLocation;
+      var dropOffVictimLatLng = LatLng(dropOff.latitude, dropOff.longitude);
+      var details = await AssistantMethods.obtainPlaceDirectionDetails(paramedicCurrentLocation, dropOffVictimLatLng);
+      if(details == null)
+      {
+        return;
+      }
+      setState(() {
+        tripStatus = "Headed to the destination - " + details.durationText;
+      });
+
+      isRequestingPositionDetails = false;
+    }
+  }
+
+  void cancelTripRequest() {
     victimRequestRef.remove();
-    /*setState(() {
+    setState(() {
       state = "normal";
-    });*/
+    });
   }
 
-  void displayRequestTripContainer()
-  {
+  void displayRequestTripContainer() {
     setState(() {
       requestTripContainerHeight = 250.0;
       tripDetailsContainerHeight = 0;
@@ -147,8 +235,17 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     saveVictimRequest();
   }
 
-  resetApp()
+  void displayParamedicDetailsContainer()
   {
+    setState(() {
+      requestTripContainerHeight = 0.0;
+      tripDetailsContainerHeight = 0.0;
+      bottomPaddingOfMap = 280.0;
+      paramedicDetailsContainerHeight = 310.0;
+    });
+  }
+
+  resetApp() {
     setState(() {
       drawerOpen = true;
       searchContainerHeight = 300.0;
@@ -180,19 +277,22 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
   //Retrieve Victim's Current Location
   void locatePosition() async
   {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
     currentPosition = position;
 
     LatLng latLatPosition = LatLng(position.latitude, position.longitude);
 
-    CameraPosition cameraPosition = new CameraPosition(target: latLatPosition, zoom: 14);
-    newGoogleMapController.animateCamera(CameraUpdate.newCameraPosition(cameraPosition));
+    CameraPosition cameraPosition = new CameraPosition(
+        target: latLatPosition, zoom: 14);
+    newGoogleMapController.animateCamera(
+        CameraUpdate.newCameraPosition(cameraPosition));
 
-    String address = await AssistantMethods.searchCoordinateAddress(position, context);
+    String address = await AssistantMethods.searchCoordinateAddress(
+        position, context);
     print("This is your address :: " + address);
 
     initGeoFireListiner();
-
   }
 
   static final CameraPosition _kGooglePlex = CameraPosition(
@@ -225,7 +325,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text("Profile Name", style: TextStyle(
-                              fontSize: 16.0, fontFamily: "Poppins-Bold"),),
+                                fontSize: 16.0, fontFamily: "Poppins-Bold"),),
                             SizedBox(height: 10.0,),
                             Text("Visit Profile"),
                           ],
@@ -246,17 +346,18 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                 ),
                 ListTile(
                   leading: Icon(Icons.person),
-                  title: Text("Visit Profile", style: TextStyle(fontSize: 15.0),),
+                  title: Text(
+                    "Visit Profile", style: TextStyle(fontSize: 15.0),),
                 ),
                 ListTile(
                   leading: Icon(Icons.info),
                   title: Text("About", style: TextStyle(fontSize: 15.0),),
                 ),
                 GestureDetector(
-                  onTap: ()
-                  {
+                  onTap: () {
                     FirebaseAuth.instance.signOut();
-                    Navigator.pushNamedAndRemoveUntil(context, LoginScreen.idScreen, (route) => false);
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, LoginScreen.idScreen, (route) => false);
                   },
                   child: ListTile(
                     leading: Icon(Icons.logout),
@@ -268,7 +369,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
           ),
         ),
 
-      body: Stack(
+        body: Stack(
           children: [
             GoogleMap(
               padding: EdgeInsets.only(bottom: bottomPaddingOfMap),
@@ -298,14 +399,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
               top: 38.0,
               left: 22.0,
               child: GestureDetector(
-                onTap: ()
-                {
-                  if(drawerOpen)
-                  {
+                onTap: () {
+                  if (drawerOpen) {
                     scaffoldKey.currentState.openDrawer();
                   }
-                  else
-                  {
+                  else {
                     resetApp();
                   }
                 },
@@ -327,132 +425,143 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                   ),
                   child: CircleAvatar(
                     backgroundColor: Colors.white,
-                    child: Icon((drawerOpen) ?Icons.menu : Icons.close, color: Colors.black,),
+                    child: Icon((drawerOpen) ? Icons.menu : Icons.close,
+                      color: Colors.black,),
                     radius: 20.0,
                   ),
                 ),
               ),
             ),
 
-            //Search Ui
+            //Search User Interface
             Positioned(
               left: 0.0,
               right: 0.0,
               bottom: 0.0,
-                child: AnimatedSize(
-                  vsync: this,
-                  curve: Curves.bounceIn,
-                  duration: new Duration(milliseconds: 160),
-                  child: Container(
-                    height: searchContainerHeight,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(topLeft: Radius.circular(18.0),
-                          topRight: Radius.circular(18.0)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black,
-                          blurRadius: 16.0,
-                          spreadRadius: 0.5,
-                          offset: Offset(0.7, 0.7),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24.0, vertical: 18.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 6.0),
-                          Text("Don't panic,", style: TextStyle(fontSize: 12.0),),
-                          Text("Request for help.", style: TextStyle(fontSize: 20.0, fontFamily: "Poppins-Bold"),),
-                          SizedBox(height: 20.0),
+              child: AnimatedSize(
+                vsync: this,
+                curve: Curves.bounceIn,
+                duration: new Duration(milliseconds: 160),
+                child: Container(
+                  height: searchContainerHeight,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(18.0),
+                        topRight: Radius.circular(18.0)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black,
+                        blurRadius: 16.0,
+                        spreadRadius: 0.5,
+                        offset: Offset(0.7, 0.7),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0, vertical: 18.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 6.0),
+                        Text("Don't panic,", style: TextStyle(fontSize: 12.0),),
+                        Text("Request for help.", style: TextStyle(
+                            fontSize: 20.0, fontFamily: "Poppins-Bold"),),
+                        SizedBox(height: 20.0),
 
-                          GestureDetector(
-                            onTap: () async
-                            {
-                              var res = await Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
+                        GestureDetector(
+                          onTap: () async
+                          {
+                            var res = await Navigator.push(context,
+                                MaterialPageRoute(
+                                    builder: (context) => SearchScreen()));
 
-                              if(res == "obtainDirection")
-                              {
-                                displayTripDetailsContainer();
-                              }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(5.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black54,
-                                    blurRadius: 6.0,
-                                    spreadRadius: 0.5,
-                                    offset: Offset(0.7, 0.7),
-                                  ),
-                                ],
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.search, color: Colors.blue,),
-                                    SizedBox(width: 10.0,),
-                                    Text("Search Destination")
-                                  ],
+                            if (res == "obtainDirection") {
+                              displayTripDetailsContainer();
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(5.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black54,
+                                  blurRadius: 6.0,
+                                  spreadRadius: 0.5,
+                                  offset: Offset(0.7, 0.7),
                                 ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.search, color: Colors.blue,),
+                                  SizedBox(width: 10.0,),
+                                  Text("Search Destination")
+                                ],
                               ),
                             ),
                           ),
+                        ),
 
-                          SizedBox(height: 24.0,),
-                          Row(
-                            children: [
-                              Icon(Icons.pin_drop, color: Colors.grey,),
-                              SizedBox(width: 12.0, height: 10.0,),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      Provider.of<AppData>(context).pickUpLocation != null
-                                          ? Provider.of<AppData>(context).pickUpLocation.placeName
-                                          : "Add emergency location"
-                                  ),
-                                  SizedBox(height: 4.0,),
-                                  Text("Your current emergency location", style: TextStyle(color: Colors.black54, fontSize: 12.0),),
-                                ],
-                              ),
-                            ],
-                          ),
+                        SizedBox(height: 24.0,),
+                        Row(
+                          children: [
+                            Icon(Icons.pin_drop, color: Colors.grey,),
+                            SizedBox(width: 12.0, height: 10.0,),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                    Provider
+                                        .of<AppData>(context)
+                                        .pickUpLocation != null
+                                        ? Provider
+                                        .of<AppData>(context)
+                                        .pickUpLocation
+                                        .placeName
+                                        : "Add emergency location"
+                                ),
+                                SizedBox(height: 4.0,),
+                                Text("Your current emergency location",
+                                  style: TextStyle(
+                                      color: Colors.black54, fontSize: 12.0),),
+                              ],
+                            ),
+                          ],
+                        ),
 
-                          SizedBox(height: 10.0,),
+                        SizedBox(height: 10.0,),
 
-                          DividerWidget(),
+                        DividerWidget(),
 
-                          SizedBox(height: 16.0,),
+                        SizedBox(height: 16.0,),
 
-                          Row(
-                            children: [
-                              Icon(Icons.home, color: Colors.grey,),
-                              SizedBox(width: 12.0,),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Add Home"),
-                                  SizedBox(height: 4.0,),
-                                  Text("Your current residential address",
-                                    style: TextStyle(
-                                        color: Colors.black54, fontSize: 12.0),),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                        Row(
+                          children: [
+                            Icon(Icons.home, color: Colors.grey,),
+                            SizedBox(width: 12.0,),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Add Home"),
+                                SizedBox(height: 4.0,),
+                                Text("Your current residential address",
+                                  style: TextStyle(
+                                      color: Colors.black54, fontSize: 12.0),),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
+            ),
 
             //Trip Details User Interface
             Positioned(
@@ -467,13 +576,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                   height: tripDetailsContainerHeight,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.only(topLeft: Radius.circular(16.0), topRight: Radius.circular(16.0),),
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16.0),
+                      topRight: Radius.circular(16.0),),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black,
                         blurRadius: 16.0,
                         spreadRadius: 0.5,
-                        offset: Offset(0.7,0.7),
+                        offset: Offset(0.7, 0.7),
                       ),
                     ],
                   ),
@@ -489,22 +600,33 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                             padding: EdgeInsets.symmetric(horizontal: 16.0),
                             child: Row(
                               children: [
-                                Image.asset("images/ambulance.png", height: 70.0, width: 80.0,),
+                                Image.asset(
+                                  "images/ambulance.png", height: 70.0,
+                                  width: 80.0,),
                                 SizedBox(width: 16.0,),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      "Ambulance", style: TextStyle(fontSize: 18.0, fontFamily: "Poppins-Bold"),
+                                      "Ambulance", style: TextStyle(
+                                        fontSize: 18.0,
+                                        fontFamily: "Poppins-Bold"),
                                     ),
                                     Text(
-                                      ((tripDirectionDetails != null) ?tripDirectionDetails.distanceText : ''), style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                                      ((tripDirectionDetails != null)
+                                          ? tripDirectionDetails.distanceText
+                                          : ''), style: TextStyle(
+                                        fontSize: 16.0, color: Colors.grey),
                                     ),
                                   ],
                                 ),
                                 Expanded(child: Container(),),
                                 Text(
-                                  ((tripDirectionDetails != null) ? '\Ksh. ${AssistantMethods.calculateFares(tripDirectionDetails)}' : ''), style: TextStyle(fontFamily: "Poppins-Bold",),
+                                  ((tripDirectionDetails != null)
+                                      ? '\Ksh. ${AssistantMethods
+                                      .calculateFares(tripDirectionDetails)}'
+                                      : ''),
+                                  style: TextStyle(fontFamily: "Poppins-Bold",),
                                 ),
                               ],
                             ),
@@ -517,11 +639,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                           padding: EdgeInsets.symmetric(horizontal: 20.0),
                           child: Row(
                             children: [
-                              Icon(FontAwesomeIcons.moneyCheckAlt, size: 18.0, color: Colors.black54,),
+                              Icon(FontAwesomeIcons.moneyCheckAlt, size: 18.0,
+                                color: Colors.black54,),
                               SizedBox(width: 16.0),
                               Text("Cash"),
                               SizedBox(width: 6.0,),
-                              Icon(Icons.keyboard_arrow_down, color: Colors.black54, size: 16.0,),
+                              Icon(Icons.keyboard_arrow_down,
+                                color: Colors.black54, size: 16.0,),
                             ],
                           ),
                         ),
@@ -531,27 +655,34 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 16.0),
                           child: RaisedButton(
-                            onPressed: ()
-                            {
-                             /* setState(() {
+                            onPressed: () {
+                              setState(() {
                                 state = "requesting";
-                              });*/
+                              });
                               displayRequestTripContainer();
-                              /*availableParamedics = GeoFireAssistant.nearbyAvailableParamedicsList;
-                              searchNearestParamedic();*/
+                              availableParamedics = GeoFireAssistant
+                                  .nearbyAvailableParamedicsList;
+                              searchNearestParamedic();
                             },
-                            color: Theme.of(context).accentColor,
+                            color: Theme
+                                .of(context)
+                                .accentColor,
                             child: Padding(
                               padding: EdgeInsets.all(17.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment
+                                    .spaceBetween,
                                 children: [
-                                  Text("Request", style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),),
-                                  Icon(FontAwesomeIcons.ambulance, color: Colors.white, size: 26.0,),
+                                  Text("Request", style: TextStyle(
+                                      fontSize: 20.0,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white),),
+                                  Icon(FontAwesomeIcons.ambulance,
+                                    color: Colors.white, size: 26.0,),
                                 ],
                               ),
                             ),
-                          ) ,
+                          ),
                         ),
                       ],
                     ),
@@ -567,14 +698,16 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
               right: 0.0,
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.only(topLeft: Radius.circular(16.0), topRight: Radius.circular(16.0),),
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(16.0),
+                    topRight: Radius.circular(16.0),),
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       spreadRadius: 0.5,
                       blurRadius: 16.0,
                       color: Colors.black54,
-                      offset: Offset(0.7,0.7),
+                      offset: Offset(0.7, 0.7),
                     ),
                   ],
                 ),
@@ -612,8 +745,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                       SizedBox(height: 22.0,),
 
                       GestureDetector(
-                        onTap: ()
-                        {
+                        onTap: () {
                           cancelTripRequest();
                           resetApp();
                         },
@@ -623,7 +755,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(26.0),
-                            border: Border.all(width: 2.0, color: Colors.grey[300]),
+                            border: Border.all(width: 2.0,
+                                color: Colors.grey[300]),
                           ),
                           child: Icon(Icons.close, size: 26.0,),
                         ),
@@ -633,7 +766,125 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
 
                       Container(
                         width: double.infinity,
-                        child: Text("Cancel Request", textAlign: TextAlign.center, style: TextStyle(fontSize: 12.0),),
+                        child: Text(
+                          "Cancel Request", textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 12.0),),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            //Display Assigned Paramedic Info
+            Positioned(
+              bottom: 0.0,
+              left: 0.0,
+              right: 0.0,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.only(topLeft: Radius.circular(16.0), topRight: Radius.circular(16.0),),
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      spreadRadius: 0.5,
+                      blurRadius: 16.0,
+                      color: Colors.black54,
+                      offset: Offset(0.7,0.7),
+                    ),
+                  ],
+                ),
+                height: paramedicDetailsContainerHeight,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 18.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 6.0,),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(tripStatus, textAlign: TextAlign.center, style: TextStyle(fontSize: 20.0, fontFamily: "Poppins-Bold"),),
+                        ],
+                      ),
+
+                      SizedBox(height: 22.0,),
+
+                      Divider(height: 2.0, thickness: 2.0,),
+
+                      SizedBox(height: 22.0,),
+
+                      Text(ambulanceDetailsParamedic, style: TextStyle(color: Colors.grey),),
+
+                      Text(paramedicName, style: TextStyle(fontSize: 20.0),),
+
+                      SizedBox(height: 22.0,),
+
+                      Divider(height: 2.0, thickness: 2.0,),
+
+                      SizedBox(height: 22.0,),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 55.0,
+                                width: 55.0,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                                  border: Border.all(width: 2.0, color: Colors.grey),
+                                ),
+                                child: Icon(
+                                  Icons.call,
+                                ),
+                              ),
+                              SizedBox(height: 10.0,),
+                              Text("Call"),
+                            ],
+                          ),
+
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 55.0,
+                                width: 55.0,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                                  border: Border.all(width: 2.0, color: Colors.grey),
+                                ),
+                                child: Icon(
+                                  Icons.list,
+                                ),
+                              ),
+                              SizedBox(height: 10.0,),
+                              Text("Details"),
+                            ],
+                          ),
+
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                height: 55.0,
+                                width: 55.0,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                                  border: Border.all(width: 2.0, color: Colors.grey),
+                                ),
+                                child: Icon(
+                                  Icons.close,
+                                ),
+                              ),
+                              SizedBox(height: 10.0,),
+                              Text("Cancel"),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -648,8 +899,12 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
 
   Future<void> getPlaceDirection() async
   {
-    var initialPos = Provider.of<AppData>(context, listen: false).pickUpLocation;
-    var finalPos = Provider.of<AppData>(context, listen: false).dropOffLocation;
+    var initialPos = Provider
+        .of<AppData>(context, listen: false)
+        .pickUpLocation;
+    var finalPos = Provider
+        .of<AppData>(context, listen: false)
+        .dropOffLocation;
 
     var pickUpLatLng = LatLng(initialPos.latitude, initialPos.longitude);
     var dropOffLatLng = LatLng(finalPos.latitude, finalPos.longitude);
@@ -660,7 +915,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
             ProgressDialog(message: "Please wait...",)
     );
 
-    var details = await AssistantMethods.obtainPlaceDirectionDetails(pickUpLatLng, dropOffLatLng);
+    var details = await AssistantMethods.obtainPlaceDirectionDetails(
+        pickUpLatLng, dropOffLatLng);
 
     setState(() {
       tripDirectionDetails = details;
@@ -672,15 +928,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     print(details.encodedPoints);
 
     PolylinePoints polylinePoints = PolylinePoints();
-    List<PointLatLng> decodedPolyLinePointsResult = polylinePoints.decodePolyline(details.encodedPoints);
+    List<PointLatLng> decodedPolyLinePointsResult = polylinePoints
+        .decodePolyline(details.encodedPoints);
 
     pLineCoordinates.clear();
 
-    if(decodedPolyLinePointsResult.isNotEmpty)
-    {
-      decodedPolyLinePointsResult.forEach((PointLatLng pointLatLng)
-      {
-        pLineCoordinates.add(LatLng(pointLatLng.latitude, pointLatLng.longitude));
+    if (decodedPolyLinePointsResult.isNotEmpty) {
+      decodedPolyLinePointsResult.forEach((PointLatLng pointLatLng) {
+        pLineCoordinates.add(
+            LatLng(pointLatLng.latitude, pointLatLng.longitude));
       });
     }
 
@@ -702,35 +958,41 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     });
 
     LatLngBounds latLngBounds;
-    if(pickUpLatLng.latitude > dropOffLatLng.latitude  &&  pickUpLatLng.longitude > dropOffLatLng.longitude)
-    {
-      latLngBounds = LatLngBounds(southwest: dropOffLatLng, northeast: pickUpLatLng);
+    if (pickUpLatLng.latitude > dropOffLatLng.latitude &&
+        pickUpLatLng.longitude > dropOffLatLng.longitude) {
+      latLngBounds =
+          LatLngBounds(southwest: dropOffLatLng, northeast: pickUpLatLng);
     }
-    else if(pickUpLatLng.longitude > dropOffLatLng.longitude)
-    {
-      latLngBounds = LatLngBounds(southwest: LatLng(pickUpLatLng.latitude, dropOffLatLng.longitude), northeast: LatLng(dropOffLatLng.latitude, pickUpLatLng.longitude));
+    else if (pickUpLatLng.longitude > dropOffLatLng.longitude) {
+      latLngBounds = LatLngBounds(
+          southwest: LatLng(pickUpLatLng.latitude, dropOffLatLng.longitude),
+          northeast: LatLng(dropOffLatLng.latitude, pickUpLatLng.longitude));
     }
-    else if(pickUpLatLng.latitude > dropOffLatLng.latitude)
-    {
-      latLngBounds = LatLngBounds(southwest: LatLng(dropOffLatLng.latitude, pickUpLatLng.longitude), northeast: LatLng(pickUpLatLng.latitude, dropOffLatLng.longitude));
+    else if (pickUpLatLng.latitude > dropOffLatLng.latitude) {
+      latLngBounds = LatLngBounds(
+          southwest: LatLng(dropOffLatLng.latitude, pickUpLatLng.longitude),
+          northeast: LatLng(pickUpLatLng.latitude, dropOffLatLng.longitude));
     }
-    else
-    {
-      latLngBounds = LatLngBounds(southwest: pickUpLatLng, northeast: dropOffLatLng);
+    else {
+      latLngBounds =
+          LatLngBounds(southwest: pickUpLatLng, northeast: dropOffLatLng);
     }
 
-    newGoogleMapController.animateCamera(CameraUpdate.newLatLngBounds(latLngBounds, 70));
+    newGoogleMapController.animateCamera(
+        CameraUpdate.newLatLngBounds(latLngBounds, 70));
 
     Marker pickUpLocMarker = Marker(
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow),
-      infoWindow: InfoWindow(title: initialPos.placeName, snippet: "My location"),
+      infoWindow: InfoWindow(
+          title: initialPos.placeName, snippet: "My location"),
       position: pickUpLatLng,
       markerId: MarkerId("pickUpId"),
     );
 
     Marker dropOffLocMarker = Marker(
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      infoWindow: InfoWindow(title: finalPos.placeName, snippet: "DropOff location"),
+      infoWindow: InfoWindow(
+          title: finalPos.placeName, snippet: "DropOff location"),
       position: dropOffLatLng,
       markerId: MarkerId("dropOffId"),
     );
@@ -764,11 +1026,11 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     });
   }
 
-  void initGeoFireListiner()
-  {
+  void initGeoFireListiner() {
     Geofire.initialize("Available_Paramedics");
 
-    Geofire.queryAtLocation(currentPosition.latitude, currentPosition.longitude, 15).listen((map) {
+    Geofire.queryAtLocation(
+        currentPosition.latitude, currentPosition.longitude, 15).listen((map) {
       print(map);
       if (map != null) {
         var callBack = map['callBack'];
@@ -779,9 +1041,9 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
             nearbyAvailableParamedics.key = map['key'];
             nearbyAvailableParamedics.latitude = map['latitude'];
             nearbyAvailableParamedics.longitude = map['longitude'];
-            GeoFireAssistant.nearbyAvailableParamedicsList.add(nearbyAvailableParamedics);
-            if(nearbyAvailableParamedicKeysLoaded == true)
-            {
+            GeoFireAssistant.nearbyAvailableParamedicsList.add(
+                nearbyAvailableParamedics);
+            if (nearbyAvailableParamedicKeysLoaded == true) {
               updateAvailableParamedicsOnMap();
             }
             break;
@@ -796,7 +1058,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
             nearbyAvailableParamedics.key = map['key'];
             nearbyAvailableParamedics.latitude = map['latitude'];
             nearbyAvailableParamedics.longitude = map['longitude'];
-            GeoFireAssistant.updateParamedicByLocation(nearbyAvailableParamedics);
+            GeoFireAssistant.updateParamedicByLocation(
+                nearbyAvailableParamedics);
             updateAvailableParamedicsOnMap();
             break;
 
@@ -811,16 +1074,16 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     //comment
   }
 
-  void updateAvailableParamedicsOnMap()
-  {
+  void updateAvailableParamedicsOnMap() {
     setState(() {
       markersSet.clear();
     });
 
     Set<Marker> tMarkers = Set<Marker>();
-    for(NearbyAvailableParamedics paramedic in GeoFireAssistant.nearbyAvailableParamedicsList)
-    {
-      LatLng paramedicAvailablePosition = LatLng(paramedic.latitude, paramedic.longitude);
+    for (NearbyAvailableParamedics paramedic in GeoFireAssistant
+        .nearbyAvailableParamedicsList) {
+      LatLng paramedicAvailablePosition = LatLng(
+          paramedic.latitude, paramedic.longitude);
 
       Marker marker = Marker(
         markerId: MarkerId('paramedic${paramedic.key}'),
@@ -836,17 +1099,86 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin
     });
   }
 
-  void createIconMarker()
-  {
-    if(nearByIcon == null)
-    {
-      ImageConfiguration imageConfiguration = createLocalImageConfiguration(context, size: Size(2, 2));
-      BitmapDescriptor.fromAssetImage(imageConfiguration, "images/ambulance_top.png")
-          .then((value)
-      {
+  void createIconMarker() {
+    if (nearByIcon == null) {
+      ImageConfiguration imageConfiguration = createLocalImageConfiguration(
+          context, size: Size(2, 2));
+      BitmapDescriptor.fromAssetImage(
+          imageConfiguration, "images/ambulance_top.png")
+          .then((value) {
         nearByIcon = value;
       });
     }
   }
 
+  void noParamedicFound() {
+    showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) => NoParamedicAvailableDialog()
+    );
+  }
+
+  void searchNearestParamedic() {
+    if (availableParamedics.length == 0) {
+      cancelTripRequest();
+      resetApp();
+      noParamedicFound();
+      return;
+    }
+
+    var paramedic = availableParamedics[0];
+    notifyParamedic(paramedic);
+    availableParamedics.removeAt(0);
+  }
+
+  void notifyParamedic(NearbyAvailableParamedics paramedic) {
+    paramedicsRef.child(paramedic.key).child("newEmergency").set(
+        victimRequestRef.key);
+
+    paramedicsRef.child(paramedic.key).child("emergency_token").once().then((
+        DataSnapshot snap) {
+      if (snap.value != null) {
+        String token = snap.value.toString();
+        AssistantMethods.sendNotificationToParamedic(
+            token, context, victimRequestRef.key);
+      }
+      else {
+        return;
+      }
+
+      const oneSecondPassed = Duration(seconds: 1);
+      var timer = Timer.periodic(oneSecondPassed, (timer)
+      {
+
+        if(state != "requesting")
+        {
+          paramedicsRef.child(paramedic.key).child("newEmergency").set("cancelled");
+          paramedicsRef.child(paramedic.key).child("newEmergency").onDisconnect();
+          paramedicRequestTimeOut = 30;
+          timer.cancel();
+        }
+
+        paramedicRequestTimeOut = paramedicRequestTimeOut - 1;
+
+        paramedicsRef.child(paramedic.key).child("newEmergency").onValue.listen((event)
+        {
+          if (event.snapshot.value.toString() == "accepted") {
+            paramedicsRef.child(paramedic.key).child("newEmergency").onDisconnect();
+            paramedicRequestTimeOut = 30;
+            timer.cancel();
+          }
+        });
+
+        if (paramedicRequestTimeOut == 0) {
+          paramedicsRef.child(paramedic.key).child("newEmergency").set("timeout");
+          paramedicsRef.child(paramedic.key).child("newEmergency").onDisconnect();
+          paramedicRequestTimeOut = 30;
+          timer.cancel();
+
+          searchNearestParamedic();
+        }
+      });
+    });
+  }
 }

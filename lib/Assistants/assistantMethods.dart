@@ -1,5 +1,5 @@
+import 'dart:convert';
 import 'dart:math';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,6 +11,7 @@ import 'package:victim_app/Models/address.dart';
 import 'package:victim_app/Models/allVictims.dart';
 import 'package:victim_app/Models/directionDetails.dart';
 import '../configMaps.dart';
+import 'package:http/http.dart' as http;
 
 class AssistantMethods {
   static Future<String> searchCoordinateAddress(Position position, context) async
@@ -91,4 +92,43 @@ class AssistantMethods {
     int radNumber = random.nextInt(num);
     return radNumber.toDouble();
   }
+
+  static sendNotificationToParamedic(String token, context, String victim_request_id) async
+  {
+    var destination = Provider.of<AppData>(context, listen: false).dropOffLocation;
+    Map<String, String> headerMap =
+    {
+      'Content-Type': 'application/json',
+      'Authorization': serverToken,
+    };
+
+    Map notificationMap =
+    {
+      'body': 'DropOff Address, ${destination.placeName}',
+      'title': 'New Emergency Request'
+    };
+
+    Map dataMap =
+    {
+      'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+      'id': '1',
+      'status': 'done',
+      'victim_request_id': victim_request_id,
+    };
+
+    Map sendNotificationMap =
+    {
+      "notification": notificationMap,
+      "data": dataMap,
+      "priority": "high",
+      "to": token,
+    };
+
+    var res = await http.post(
+      'https://fcm.googleapis.com/fcm/send',
+      headers: headerMap,
+      body: jsonEncode(sendNotificationMap),
+    );
+  }
+
 }

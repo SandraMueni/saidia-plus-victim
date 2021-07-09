@@ -9,7 +9,9 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:victim_app/AllScreens/searchScreen.dart';
+import 'package:victim_app/AllWidgets/CollectFareDialog.dart';
 import 'package:victim_app/AllWidgets/Divider.dart';
 import 'package:victim_app/AllWidgets/noParamedicAvailableDialog.dart';
 import 'package:victim_app/AllWidgets/progressDialog.dart';
@@ -77,8 +79,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
   }
 
   void saveVictimRequest() {
-    victimRequestRef =
-        FirebaseDatabase.instance.reference().child("Victim Requests").push();
+    victimRequestRef = FirebaseDatabase.instance.reference().child("Victim Requests").push();
 
     var pickUp = Provider
         .of<AppData>(context, listen: false)
@@ -114,7 +115,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     victimRequestRef.set(tripInfoMap);
 
-    tripStreamSubscription = victimRequestRef.onValue.listen((event){
+    tripStreamSubscription = victimRequestRef.onValue.listen((event) async{
       if(event.snapshot.value == null)
       {
         return;
@@ -167,6 +168,26 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         displayParamedicDetailsContainer();
         Geofire.stopListener();
         deleteGeofileMarkers();
+      }
+      if(statusTrip == "ended")
+      {
+        if(event.snapshot.value["charges"] != null)
+          {
+            int charge = int.parse(event.snapshot.value["charges"].toString());
+            var res =await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context)=> CollectFareDialog(paymentMethod: "cash", fareAmount: charge,),
+            );
+            if(res == "close")
+              {
+                victimRequestRef.onDisconnect();
+                victimRequestRef = null;
+                tripStreamSubscription.cancel();
+                tripStreamSubscription = null;
+                resetApp();
+              }
+          }
       }
     });
   }
@@ -257,6 +278,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       markersSet.clear();
       circlesSet.clear();
       pLineCoordinates.clear();
+
+      statusTrip = " ";
+      paramedicName = " ";
+      paramedicContact = " ";
+      ambulanceDetailsParamedic = " ";
+      tripStatus = "A paramedic is on the way";
+      paramedicDetailsContainerHeight = 0.0;
     });
 
     locatePosition();
@@ -303,9 +331,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     createIconMarker();
     return Scaffold(
         key: scaffoldKey,
-        appBar: AppBar(
-          title: Text("Saidia Plus+"),
-        ),
         drawer: Container(
           color: Colors.white,
           width: 255.0,
@@ -828,61 +853,29 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 55.0,
-                                width: 55.0,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                                  border: Border.all(width: 2.0, color: Colors.grey),
-                                ),
-                                child: Icon(
-                                  Icons.call,
+                          // in-call option
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 20.0),
+                            child: RaisedButton(
+                              shape: new RoundedRectangleBorder(
+                                borderRadius: new BorderRadius.circular(24.0),
+                              ),
+                              onPressed: () async
+                              {
+                                launch(('tel://${paramedicContact}'));
+                              },
+                              color: Colors.black87,
+                              child: Padding(
+                                padding: EdgeInsets.all(17.0),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                  children: [
+                                    Text("Call Paramedic   ", style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold, color: Colors.white),),
+                                    Icon(Icons.call, color: Colors.white, size: 26.0,),
+                                  ],
                                 ),
                               ),
-                              SizedBox(height: 10.0,),
-                              Text("Call"),
-                            ],
-                          ),
-
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 55.0,
-                                width: 55.0,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                                  border: Border.all(width: 2.0, color: Colors.grey),
-                                ),
-                                child: Icon(
-                                  Icons.list,
-                                ),
-                              ),
-                              SizedBox(height: 10.0,),
-                              Text("Details"),
-                            ],
-                          ),
-
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                height: 55.0,
-                                width: 55.0,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.all(Radius.circular(25.0)),
-                                  border: Border.all(width: 2.0, color: Colors.grey),
-                                ),
-                                child: Icon(
-                                  Icons.close,
-                                ),
-                              ),
-                              SizedBox(height: 10.0,),
-                              Text("Cancel"),
-                            ],
+                            ),
                           ),
                         ],
                       ),

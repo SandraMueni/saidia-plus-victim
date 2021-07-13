@@ -217,7 +217,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
           return;
         }
         setState(() {
-          tripStatus = "A paramedic is on the way - " + details.durationText;
+          tripStatus = "A paramedic is coming - " + details.durationText;
         });
 
         isRequestingPositionDetails = false;
@@ -238,7 +238,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
         return;
       }
       setState(() {
-        tripStatus = "Headed to the destination - " + details.durationText;
+        tripStatus = "Headed to destination - " + details.durationText;
       });
 
       isRequestingPositionDetails = false;
@@ -290,7 +290,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       paramedicName = " ";
       paramedicContact = " ";
       ambulanceDetailsParamedic = " ";
-      tripStatus = "A paramedic is on the way";
+      tripStatus = "A paramedic is coming";
       paramedicDetailsContainerHeight = 0.0;
     });
 

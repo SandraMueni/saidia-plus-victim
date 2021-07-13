@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:victim_app/AllScreens/aboutScreen.dart';
 import 'package:victim_app/AllScreens/loginScreen.dart';
 import 'package:victim_app/AllScreens/mainscreen.dart';
 import 'package:victim_app/AllScreens/registrationScreen.dart';
@@ -16,6 +17,8 @@ void main() async {
 
 DatabaseReference victimsRef = FirebaseDatabase.instance.reference().child("Victims");
 DatabaseReference paramedicsRef = FirebaseDatabase.instance.reference().child("Paramedics");
+DatabaseReference newRequestRef = FirebaseDatabase.instance.reference().child("Victim Requests");
+
 
 class MyApp extends StatelessWidget {
   // This widget is the root of your application.
@@ -36,6 +39,7 @@ class MyApp extends StatelessWidget {
           RegistrationScreen.idScreen: (context) => RegistrationScreen(),
           LoginScreen.idScreen: (context) => LoginScreen(),
           MainScreen.idScreen: (context) => MainScreen(),
+          AboutScreen.idScreen: (context) => AboutScreen(),
         },
         debugShowCheckedModeBanner: false,
       ),

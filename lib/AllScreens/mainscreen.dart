@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:victim_app/AllScreens/profileTabPage.dart';
 import 'package:victim_app/AllScreens/registrationScreen.dart';
 import 'package:victim_app/AllScreens/searchScreen.dart';
 import 'package:victim_app/AllWidgets/CollectFareDialog.dart';
@@ -24,6 +25,8 @@ import 'package:victim_app/Models/nearbyAvailableParamedics.dart';
 
 import '../configMaps.dart';
 import '../main.dart';
+import 'HistoryScreen.dart';
+import 'aboutScreen.dart';
 import 'loginScreen.dart';
 
 class MainScreen extends StatefulWidget
@@ -327,6 +330,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     initGeoFireListiner();
 
     victimName = victimCurrentInfo.victim_name;
+
+    AssistantMethods.retrieveHistoryInfo(context);
   }
 
   static final CameraPosition _kGooglePlex = CameraPosition(
@@ -358,7 +363,15 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                             Text(victimName, style: TextStyle(
                                 fontSize: 16.0, fontFamily: "Poppins-Bold"),),
                             SizedBox(height: 10.0,),
-                            Text("Visit Profile"),
+                            GestureDetector(
+                              onTap: ()
+                              {
+                                Navigator.push(context, MaterialPageRoute(builder: (context)=> ProfileTabPage()));
+                              },
+                              child: Text(
+                                  "Visit Profile"
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -371,18 +384,34 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 SizedBox(height: 12.0,),
 
                 //Drawer Body Constraints
-                ListTile(
-                  leading: Icon(Icons.history),
-                  title: Text("History", style: TextStyle(fontSize: 15.0),),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=> HistoryScreen()));
+                  },
+                  child: ListTile(
+                    leading: Icon(Icons.history),
+                    title: Text("History", style: TextStyle(fontSize: 15.0),),
+                  ),
                 ),
                 ListTile(
                   leading: Icon(Icons.person),
-                  title: Text(
-                    "Visit Profile", style: TextStyle(fontSize: 15.0),),
+                  title: GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=> ProfileTabPage()));
+                    },
+                    child: Text(
+                      "Visit Profile", style: TextStyle(fontSize: 15.0),),
+                  ),
                 ),
-                ListTile(
-                  leading: Icon(Icons.info),
-                  title: Text("About", style: TextStyle(fontSize: 15.0),),
+                GestureDetector(
+                  onTap: ()
+                  {
+                    Navigator.push(context, MaterialPageRoute(builder: (context)=> AboutScreen()));
+                  },
+                  child: ListTile(
+                    leading: Icon(Icons.info),
+                    title: Text("About", style: TextStyle(fontSize: 15.0),),
+                  ),
                 ),
                 GestureDetector(
                   onTap: () {
@@ -947,7 +976,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               ),
                               onPressed: () async
                               {
-                                launch(('tel://${paramedicContact}'));
+                                //Contact Paramedic
+                                launch(('tel://$paramedicContact'));
                               },
                               color: Colors.black87,
                               child: Padding(

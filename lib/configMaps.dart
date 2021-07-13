@@ -17,4 +17,6 @@ String ambulanceDetailsParamedic = "";
 String paramedicName = "";
 String paramedicContact = "";
 
+String ambulanceTripType="";
+
 String serverToken = "key=AAAA7XBNr-0:APA91bGxbA5t8UK-vESYTwaVivTkl7nLLr0DQWKsxaKxTp3ytWTDBnhxyPB4cqLzvJr6myJN_FpfaTYiYDIYMyt03tAOoB2Mnv5EkvDP1GWJsx9RSiGueDunYsrC7oiYWNMUkSNOtryG";

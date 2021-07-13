@@ -10,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:victim_app/AllScreens/registrationScreen.dart';
 import 'package:victim_app/AllScreens/searchScreen.dart';
 import 'package:victim_app/AllWidgets/CollectFareDialog.dart';
 import 'package:victim_app/AllWidgets/Divider.dart';
@@ -70,6 +71,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
   bool isRequestingPositionDetails = false;
 
+  String victimName="";
+
   @override
   void initState() {
     // TODO: implement initState
@@ -111,6 +114,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       "victim_contact": victimCurrentInfo.victim_contact,
       "pickup_address": pickUp.placeName,
       "dropoff_address": dropOff.placeName,
+      "ambulance_type": ambulanceTripType,
     };
 
     victimRequestRef.set(tripInfoMap);
@@ -296,8 +300,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     setState(() {
       searchContainerHeight = 0;
-      tripDetailsContainerHeight = 240.0;
-      bottomPaddingOfMap = 230.0;
+      tripDetailsContainerHeight = 340.0;
+      bottomPaddingOfMap = 360.0;
       drawerOpen = false;
     });
   }
@@ -321,6 +325,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     print("This is your address :: " + address);
 
     initGeoFireListiner();
+
+    victimName = victimCurrentInfo.victim_name;
   }
 
   static final CameraPosition _kGooglePlex = CameraPosition(
@@ -349,7 +355,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Text("Profile Name", style: TextStyle(
+                            Text(victimName, style: TextStyle(
                                 fontSize: 16.0, fontFamily: "Poppins-Bold"),),
                             SizedBox(height: 10.0,),
                             Text("Visit Profile"),
@@ -618,47 +624,161 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     padding: EdgeInsets.symmetric(vertical: 17.0),
                     child: Column(
                       children: [
-                        Container(
-                          width: double.infinity,
-                          color: Colors.tealAccent[100],
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16.0),
-                            child: Row(
-                              children: [
-                                Image.asset(
-                                  "images/ambulance.png", height: 70.0,
-                                  width: 80.0,),
-                                SizedBox(width: 16.0,),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "Ambulance", style: TextStyle(
-                                        fontSize: 18.0,
-                                        fontFamily: "Poppins-Bold"),
-                                    ),
-                                    Text(
-                                      ((tripDirectionDetails != null)
-                                          ? tripDirectionDetails.distanceText
-                                          : ''), style: TextStyle(
-                                        fontSize: 16.0, color: Colors.grey),
-                                    ),
-                                  ],
-                                ),
-                                Expanded(child: Container(),),
-                                Text(
-                                  ((tripDirectionDetails != null)
-                                      ? '\Ksh. ${AssistantMethods
-                                      .calculateFares(tripDirectionDetails)}'
-                                      : ''),
-                                  style: TextStyle(fontFamily: "Poppins-Bold",),
-                                ),
-                              ],
+
+                        //Bahati Ambulance
+                        GestureDetector(
+                          onTap: (){
+                            displayToastMessage("Searching Bahati Ambulance...", context);
+                            setState(() {
+                              state = "requesting";
+                              ambulanceTripType="Bahati";
+                            });
+                            displayRequestTripContainer();
+                            availableParamedics = GeoFireAssistant
+                                .nearbyAvailableParamedicsList;
+                            searchNearestParamedic();
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    "images/ambulance.png", height: 70.0,
+                                    width: 80.0,),
+                                  SizedBox(width: 16.0,),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Bahati Ambulance", style: TextStyle(
+                                          fontSize: 18.0,
+                                          fontFamily: "Poppins-Bold"),
+                                      ),
+                                      Text(
+                                        ((tripDirectionDetails != null) ? tripDirectionDetails.distanceText : ''), style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(child: Container(),),
+                                  Text(
+                                    ((tripDirectionDetails != null) ? '\Ksh. ${(AssistantMethods.calculateFares(tripDirectionDetails))/2}' : ''), style: TextStyle(fontFamily: "Poppins-Bold",),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
 
-                        SizedBox(height: 20.0),
+                        SizedBox(height: 10.0),
+
+                        Divider(height: 2.0, thickness: 2.0,),
+
+                        SizedBox(height: 10.0),
+
+                        //RFH Ambulance
+                        GestureDetector(
+                          onTap: (){
+                            displayToastMessage("Searching RFH Ambulance..", context);
+                            setState(() {
+                              state = "requesting";
+                              ambulanceTripType="RFH";
+                            });
+                            displayRequestTripContainer();
+                            availableParamedics = GeoFireAssistant
+                                .nearbyAvailableParamedicsList;
+                            searchNearestParamedic();
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    "images/ambulance.png", height: 70.0,
+                                    width: 80.0,),
+                                  SizedBox(width: 16.0,),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "RFH Ambulance", style: TextStyle(
+                                          fontSize: 18.0,
+                                          fontFamily: "Poppins-Bold"),
+                                      ),
+                                      Text(
+                                        ((tripDirectionDetails != null) ? tripDirectionDetails.distanceText : ''), style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(child: Container(),),
+                                  Text(
+                                    ((tripDirectionDetails != null) ? '\Ksh. ${AssistantMethods.calculateFares(tripDirectionDetails)}' : ''), style: TextStyle(fontFamily: "Poppins-Bold",),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 10.0),
+
+                        Divider(height: 2.0, thickness: 2.0,),
+
+                        SizedBox(height: 10.0),
+
+                        //St. John Ambulance
+                        GestureDetector(
+                          onTap: (){
+                            displayToastMessage("Searching St. John Ambulance..", context);
+                            setState(() {
+                              state = "requesting";
+                              ambulanceTripType="St-John";
+                            });
+                            displayRequestTripContainer();
+                            availableParamedics = GeoFireAssistant.nearbyAvailableParamedicsList;
+                            searchNearestParamedic();
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 16.0),
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    "images/ambulance.png", height: 70.0,
+                                    width: 80.0,),
+                                  SizedBox(width: 16.0,),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "St. John Ambulance", style: TextStyle(
+                                          fontSize: 18.0,
+                                          fontFamily: "Poppins-Bold"),
+                                      ),
+                                      Text(
+                                        ((tripDirectionDetails != null) ? tripDirectionDetails.distanceText : ''), style: TextStyle(fontSize: 16.0, color: Colors.grey),
+                                      ),
+                                    ],
+                                  ),
+                                  Expanded(child: Container(),),
+                                  Text(
+                                    ((tripDirectionDetails != null) ? '\Ksh. ${(AssistantMethods.calculateFares(tripDirectionDetails))*2}' : ''), style: TextStyle(fontFamily: "Poppins-Bold",),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        SizedBox(height: 10.0),
+
+                        Divider(height: 2.0, thickness: 2.0,),
+
+                        SizedBox(height: 10.0),
 
                         Padding(
                           padding: EdgeInsets.symmetric(horizontal: 20.0),
@@ -672,41 +792,6 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               Icon(Icons.keyboard_arrow_down,
                                 color: Colors.black54, size: 16.0,),
                             ],
-                          ),
-                        ),
-
-                        SizedBox(height: 24.0,),
-
-                        Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16.0),
-                          child: RaisedButton(
-                            onPressed: () {
-                              setState(() {
-                                state = "requesting";
-                              });
-                              displayRequestTripContainer();
-                              availableParamedics = GeoFireAssistant
-                                  .nearbyAvailableParamedicsList;
-                              searchNearestParamedic();
-                            },
-                            color: Theme
-                                .of(context)
-                                .accentColor,
-                            child: Padding(
-                              padding: EdgeInsets.all(17.0),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment
-                                    .spaceBetween,
-                                children: [
-                                  Text("Request", style: TextStyle(
-                                      fontSize: 20.0,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white),),
-                                  Icon(FontAwesomeIcons.ambulance,
-                                    color: Colors.white, size: 26.0,),
-                                ],
-                              ),
-                            ),
                           ),
                         ),
                       ],
@@ -1121,8 +1206,27 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
     }
 
     var paramedic = availableParamedics[0];
-    notifyParamedic(paramedic);
-    availableParamedics.removeAt(0);
+
+    paramedicsRef.child(paramedic.key).child("ambulance_details").child("ambulance_type").once().then((DataSnapshot snap) async
+    {
+      if(await snap.value != null)
+        {
+          String ambulanceType = snap.value.toString();
+          if(ambulanceType == ambulanceTripType)
+            {
+              notifyParamedic(paramedic);
+              availableParamedics.removeAt(0);
+            }
+          else
+            {
+              displayToastMessage(ambulanceTripType + " ambulance not available. Try again after a while.", context);
+            }
+        }
+      else
+      {
+        displayToastMessage("No ambulance found. Try again after a while.", context);
+      }
+    });
   }
 
   void notifyParamedic(NearbyAvailableParamedics paramedic) {

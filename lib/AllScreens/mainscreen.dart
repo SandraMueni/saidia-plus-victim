@@ -625,13 +625,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                     child: Column(
                       children: [
 
-                        //Bahati Ambulance
+                        //Type-1 Ambulance
                         GestureDetector(
                           onTap: (){
-                            displayToastMessage("Searching Bahati Ambulance...", context);
+                            displayToastMessage("Searching for type-1 ambulance...", context);
                             setState(() {
                               state = "requesting";
-                              ambulanceTripType="Bahati";
+                              ambulanceTripType="Type-1";
                             });
                             displayRequestTripContainer();
                             availableParamedics = GeoFireAssistant
@@ -652,7 +652,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "Bahati Ambulance", style: TextStyle(
+                                        "Type-1 Ambulance", style: TextStyle(
                                           fontSize: 18.0,
                                           fontFamily: "Poppins-Bold"),
                                       ),
@@ -677,13 +677,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                         SizedBox(height: 10.0),
 
-                        //RFH Ambulance
+                        //Type-2 Ambulance
                         GestureDetector(
                           onTap: (){
-                            displayToastMessage("Searching RFH Ambulance..", context);
+                            displayToastMessage("Searching for type-2 ambulance ..", context);
                             setState(() {
                               state = "requesting";
-                              ambulanceTripType="RFH";
+                              ambulanceTripType="Type-2";
                             });
                             displayRequestTripContainer();
                             availableParamedics = GeoFireAssistant
@@ -704,7 +704,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "RFH Ambulance", style: TextStyle(
+                                        "Type-2 Ambulance", style: TextStyle(
                                           fontSize: 18.0,
                                           fontFamily: "Poppins-Bold"),
                                       ),
@@ -729,13 +729,13 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
                         SizedBox(height: 10.0),
 
-                        //St. John Ambulance
+                        //Type-3 Ambulance
                         GestureDetector(
                           onTap: (){
-                            displayToastMessage("Searching St. John Ambulance..", context);
+                            displayToastMessage("Searching for type-3 ambulance..", context);
                             setState(() {
                               state = "requesting";
-                              ambulanceTripType="St-John";
+                              ambulanceTripType="Type-3";
                             });
                             displayRequestTripContainer();
                             availableParamedics = GeoFireAssistant.nearbyAvailableParamedicsList;
@@ -755,7 +755,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        "St. John Ambulance", style: TextStyle(
+                                        "Type-3 Ambulance", style: TextStyle(
                                           fontSize: 18.0,
                                           fontFamily: "Poppins-Bold"),
                                       ),

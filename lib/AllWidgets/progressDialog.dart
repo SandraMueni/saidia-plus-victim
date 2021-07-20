@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
-
-// ignore: must_be_immutable
-class ProgressDialog extends StatelessWidget
+class ProgressDialog extends StatefulWidget
 {
   String message;
   ProgressDialog({this.message});
 
+  @override
+  _ProgressDialogState createState() => _ProgressDialogState();
+}
+
+class _ProgressDialogState extends State<ProgressDialog> {
   @override
   Widget build(BuildContext context)
   {
@@ -27,7 +30,7 @@ class ProgressDialog extends StatelessWidget
               CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Colors.black),),
               SizedBox(width: 10.0,),
               Text(
-                message,
+                widget.message,
                 style: TextStyle(color: Colors.black, fontSize: 10.0),
               ),
             ],

@@ -6,15 +6,24 @@ import 'package:victim_app/AllScreens/mainscreen.dart';
 import 'package:victim_app/main.dart';
 import 'package:victim_app/AllWidgets/progressDialog.dart';
 
-// ignore: must_be_immutable
-class RegistrationScreen extends StatelessWidget
+class RegistrationScreen extends StatefulWidget
 {
 
   static const String idScreen = "register";
+
+  @override
+  _RegistrationScreenState createState() => _RegistrationScreenState();
+}
+
+class _RegistrationScreenState extends State<RegistrationScreen> {
   TextEditingController nameTextEditingController = TextEditingController();
+
   TextEditingController emailTextEditingController = TextEditingController();
+
   TextEditingController phoneTextEditingController = TextEditingController();
+
   TextEditingController insuranceTextEditingController = TextEditingController();
+
   TextEditingController passwordTextEditingController = TextEditingController();
 
   @override
@@ -245,6 +254,7 @@ class RegistrationScreen extends StatelessWidget
       ),
     );
   }
+
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
 
   void registerNewVictim(BuildContext context) async

@@ -4,15 +4,19 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:victim_app/AllScreens/mainscreen.dart';
-
 import '../main.dart';
 
-
-// ignore: must_be_immutable
-class LoginScreen extends StatelessWidget
+class LoginScreen extends StatefulWidget
 {
   static const String idScreen = "login";
+
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   TextEditingController emailTextEditingController = TextEditingController();
+
   TextEditingController passwordTextEditingController = TextEditingController();
 
   @override

@@ -1,7 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_geofire/flutter_geofire.dart';
-
 import '../configMaps.dart';
 import 'mainscreen.dart';
 
@@ -17,7 +14,7 @@ class ProfileTabPage extends StatelessWidget {
           children: [
 
             Text(
-              victimCurrentInfo.victim_name,
+              victimCurrentInfo.victimName,
               style: TextStyle(
                 fontSize: 40.0,
                 color: Colors.white,
@@ -37,7 +34,7 @@ class ProfileTabPage extends StatelessWidget {
             SizedBox(height: 40.0,),
 
             InfoCard(
-              text: victimCurrentInfo.victim_contact,
+              text: victimCurrentInfo.victimContact,
               icon: Icons.phone,
               onPressed: () async {
                 print("this is phone.");
@@ -45,7 +42,7 @@ class ProfileTabPage extends StatelessWidget {
             ),
 
             InfoCard(
-              text: victimCurrentInfo.victim_email,
+              text: victimCurrentInfo.victimEmail,
               icon: Icons.email,
               onPressed: () async {
                 print("this is email.");
@@ -72,7 +69,7 @@ class ProfileTabPage extends StatelessWidget {
   }
 }
 
-class InfoCard extends StatelessWidget
+class InfoCard extends StatefulWidget
 {
   final String text;
   final IconData icon;
@@ -81,20 +78,25 @@ class InfoCard extends StatelessWidget
   InfoCard({this.text, this.icon, this.onPressed,});
 
   @override
+  _InfoCardState createState() => _InfoCardState();
+}
+
+class _InfoCardState extends State<InfoCard> {
+  @override
   Widget build(BuildContext context)
   {
     return GestureDetector(
-      onTap: onPressed,
+      onTap: widget.onPressed,
       child: Card(
         color: Colors.white,
         margin: EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
         child: ListTile(
           leading: Icon(
-            icon,
+            widget.icon,
             color: Colors.black87,
           ),
           title: Text(
-            text,
+            widget.text,
             style: TextStyle(
               color: Colors.black87,
               fontSize: 16.0,

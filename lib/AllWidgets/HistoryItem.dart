@@ -24,7 +24,7 @@ class HistoryItem extends StatelessWidget
 
                     Image.asset('images/pickicon.png', height: 16, width: 16,),
                     SizedBox(width: 18,),
-                    Expanded(child: Container(child: Text(history.pickup_address, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18),))),
+                    Expanded(child: Container(child: Text(history.pickupAddress, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18),))),
                     SizedBox(width: 5,),
 
                     Text('\Ksh.${history.charges}', style: TextStyle(fontFamily: 'Poppins-Bold', fontSize: 16, color: Colors.black87),),
@@ -40,13 +40,13 @@ class HistoryItem extends StatelessWidget
                   Image.asset('images/desticon.png', height: 16, width: 16,),
                   SizedBox(width: 18,),
 
-                  Text(history.dropoff_address, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18),),
+                  Text(history.dropoffAddress, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 18),),
                 ],
               ),
 
               SizedBox(height: 15,),
 
-              Text(AssistantMethods.formatTripDate(history.time_created), style: TextStyle(color: Colors.grey),),
+              Text(AssistantMethods.formatTripDate(history.timeCreated), style: TextStyle(color: Colors.grey),),
             ],
           ),
         ],

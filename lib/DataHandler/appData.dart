@@ -44,6 +44,7 @@ class AppData extends ChangeNotifier
   void updateTripHistoryData(History eachHistory)
   {
     tripHistoryDataList.add(eachHistory);
+    tripHistoryDataList.sort((a,b) => b.timeCreated.compareTo(a.timeCreated));
     notifyListeners();
   }
 }

@@ -113,8 +113,8 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       "pickup_coordinates": pickUpLocMap,
       "dropoff_coordinates": dropOffLocMap,
       "time_created": DateTime.now().toString(),
-      "victim_name": victimCurrentInfo.victim_name,
-      "victim_contact": victimCurrentInfo.victim_contact,
+      "victim_name": victimCurrentInfo.victimName,
+      "victim_contact": victimCurrentInfo.victimContact,
       "pickup_address": pickUp.placeName,
       "dropoff_address": dropOff.placeName,
       "ambulance_type": ambulanceTripType,
@@ -329,7 +329,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
 
     initGeoFireListiner();
 
-    victimName = victimCurrentInfo.victim_name;
+    victimName = victimCurrentInfo.victimName;
 
     AssistantMethods.retrieveHistoryInfo(context);
   }
@@ -386,7 +386,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                 //Drawer Body Constraints
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=> HistoryScreen()));
+                      Navigator.push(context, MaterialPageRoute(builder: (context)=> HistoryScreen()));
                   },
                   child: ListTile(
                     leading: Icon(Icons.history),
@@ -576,13 +576,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                    Provider
-                                        .of<AppData>(context)
-                                        .pickUpLocation != null
-                                        ? Provider
-                                        .of<AppData>(context)
-                                        .pickUpLocation
-                                        .placeName
+                                    Provider.of<AppData>(context).pickUpLocation != null ? Provider.of<AppData>(context).pickUpLocation.placeName
                                         : "Add emergency location"
                                 ),
                                 SizedBox(height: 4.0,),
@@ -1275,7 +1269,7 @@ class _MainScreenState extends State<MainScreen> with TickerProviderStateMixin {
       }
 
       const oneSecondPassed = Duration(seconds: 1);
-      var timer = Timer.periodic(oneSecondPassed, (timer)
+      /*var timer =*/ Timer.periodic(oneSecondPassed, (timer)
       {
 
         if(state != "requesting")

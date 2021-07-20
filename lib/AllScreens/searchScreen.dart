@@ -201,7 +201,7 @@ class PredictionTile extends StatelessWidget
       padding: EdgeInsets.all(0.0),
       onPressed: ()
       {
-        getPlaceAddressDetails(placePredictions.place_id, context);
+        getPlaceAddressDetails(placePredictions.placeId, context);
       },
       child: Container(
         child: Column(
@@ -216,9 +216,9 @@ class PredictionTile extends StatelessWidget
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SizedBox(height: 4.0,),
-                      Text(placePredictions.main_text, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.0),),
+                      Text(placePredictions.mainText, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 14.0),),
                       SizedBox(height: 2.0,),
-                      Text(placePredictions.secondary_text, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.0, color: Colors.grey),),
+                      Text(placePredictions.secondaryText, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12.0, color: Colors.grey),),
                       SizedBox(height: 4.0,),
                     ],
                   ),

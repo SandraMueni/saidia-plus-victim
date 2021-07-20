@@ -6,5 +6,6 @@ class Address
   double latitude;
   double longitude;
 
+  //Constructor
   Address({this.placeFormattedAddress, this.placeName, this.placeId, this.latitude, this.longitude});
 }

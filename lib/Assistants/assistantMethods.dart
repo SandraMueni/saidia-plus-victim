@@ -79,7 +79,7 @@ class AssistantMethods {
 
   static void getCurrentOnlineVictimInfo() async
   {
-    firebaseUser = await FirebaseAuth.instance.currentUser;
+    firebaseUser = FirebaseAuth.instance.currentUser;
     String victimId = firebaseUser.uid;
     DatabaseReference reference = FirebaseDatabase.instance.reference().child("Victims").child(victimId);
 
@@ -97,7 +97,7 @@ class AssistantMethods {
     return radNumber.toDouble();
   }
 
-  static sendNotificationToParamedic(String token, context, String victim_request_id) async
+  static sendNotificationToParamedic(String token, context, String victimRequestId) async
   {
     var destination = Provider.of<AppData>(context, listen: false).dropOffLocation;
     Map<String, String> headerMap =
@@ -117,7 +117,7 @@ class AssistantMethods {
       'click_action': 'FLUTTER_NOTIFICATION_CLICK',
       'id': '1',
       'status': 'done',
-      'victim_request_id': victim_request_id,
+      'victim_request_id': victimRequestId,
     };
 
     Map sendNotificationMap =
@@ -128,7 +128,7 @@ class AssistantMethods {
       "to": token,
     };
 
-    var res = await http.post(
+    await http.post(
       'https://fcm.googleapis.com/fcm/send',
       headers: headerMap,
       body: jsonEncode(sendNotificationMap),
@@ -171,7 +171,7 @@ class AssistantMethods {
           newRequestRef.child(key).child("victim_name").once().then((DataSnapshot snap)
           {
             String victimName = snap.value.toString();
-            if(victimName == victimCurrentInfo.victim_name)
+            if(victimName == victimCurrentInfo.victimName)
             {
               var history = History.fromSnapshot(snapshot);
               Provider.of<AppData>(context, listen: false).updateTripHistoryData(history);

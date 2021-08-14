@@ -1,6 +1,6 @@
 # victim_app
 
-A new Flutter project.
+The victim flutter application for Saidia Plus+
 
 ## Getting Started
 
